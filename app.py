@@ -9,8 +9,14 @@ from datetime import datetime
 # Create a Flask Instance
 app = Flask(__name__)
 
-# Add Database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+## Add Database
+# SQLite Database
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+
+# MySQL Database
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://username:password@localhost/db_name'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:nakuldesai2510@localhost/our_users'
+
 
 # Secret Key
 app.config['SECRET_KEY'] = "my super secret key that no one is supposed to know"
