@@ -7,6 +7,7 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash 
+from wtforms.widgets import TextArea
 
 
 # Create a Flask Instance
@@ -43,7 +44,7 @@ class Users(db.Model):
 	name = db.Column(db.String(200), nullable=False)
 	email = db.Column(db.String(120), nullable=False, unique=True)
 	field = db.Column(db.String(120))
-	date_added = db.Column(db.DateTime, default=datetime.utcnow)
+	date_added = db.Column(db.DateTime, default=datetime.now)
 	# Do some password stuff!
 	password_hash = db.Column(db.String(200))
 
@@ -62,13 +63,44 @@ class Users(db.Model):
 	def __repr__(self):
 		return '<Name %r>' % self.name
 	
-class Blogs(db.Model):
+class Posts(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
 	title = db.Column(db.String(255), nullable=False)
 	content = db.Column(db.Text, nullable=False)
 	author = db.Column(db.String(255), nullable=False)
 	date_posted = db.Column(db.DateTime, default=datetime.now())
 	slug = db.Column(db.String(255), nullable=False)
+
+class PostForms(FlaskForm):
+	title = StringField("Title", validators=[DataRequired()])
+	content = StringField("Content", validators=[DataRequired()], widget=TextArea())
+	author = StringField("Author", validators=[DataRequired()])
+	slug = StringField("Slug", validators=[DataRequired()])
+	submit = SubmitField("Submit")
+
+# Add Post Page
+@app.route('/add-post', methods=["GET", "POST"])
+def add_post():
+	form = PostForms()
+
+	if form.validate_on_submit():
+		post = Posts(title=form.title.data,author=form.author.data,content=form.content.data,slug=form.slug.data,)
+		# Clear The Form
+		form.title.data = ''
+		form.author.data = ''
+		form.content.data = ''
+		form.slug.data = ''
+
+		# Add Post Data to Database
+		db.session.add(post)
+		db.session.commit()
+
+		flash("Blog Post Submitted Successfully!!")
+	
+	# Return Webpage
+	return render_template('add_post.html', form=form)
+
+
 
 @app.route('/delete/<int:id>')
 def delete(id):
