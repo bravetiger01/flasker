@@ -1,5 +1,5 @@
 
-from flask import Flask, render_template, flash, request
+from flask import Flask, render_template, flash, redirect,url_for,request
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, BooleanField, ValidationError
 from wtforms.validators import DataRequired, EqualTo, Length
@@ -84,6 +84,56 @@ def posts():
 	posts = Posts.query.order_by(Posts.date_posted)
 	return render_template('posts.html', posts=posts)
 
+@app.route('/posts/<int:id>')
+def post(id):
+	post = Posts.query.get_or_404(id)
+	return render_template('post.html', post=post)
+
+@app.route('/posts/edit/<int:id>', methods=['GET','POST'])
+def edit_post(id):
+	post = Posts.query.get_or_404(id)
+	form = PostForms()
+
+	if form.validate_on_submit():
+		post.title = form.title.data
+		post.author = form.author.data
+		post.content = form.content.data
+		post.slug = form.slug.data
+
+		# Update database
+		db.session.add(post)
+		db.session.commit()
+
+		flash("Blog Post has been Updated Successfully!!")
+	
+		# Redirect Webpage
+		return redirect(url_for('post', id=id))
+	form.title.data = post.title
+	form.author.data = post.author
+	form.content.data= post.content
+	form.slug.data = post.slug
+	return render_template('edit_post.html', form=form)
+
+@app.route('/posts/delete/<int:id>')
+def delete_post(id):
+	post_to_delete = Posts.query.get_or_404(id)
+
+	try:
+		db.session.delete(post_to_delete)
+		db.session.commit()
+
+		flash("Blog Deleted Successfully!!")
+
+		# Grab all the post from database
+		posts = Posts.query.order_by(Posts.date_posted)
+		return render_template('posts.html', posts=posts)
+	
+	except:
+		flash("Whoops!! There was an error deleting blog")
+
+		# Grab all the post from database
+		posts = Posts.query.order_by(Posts.date_posted)
+		return render_template('posts.html', posts=posts)
 
 # Add Post Page
 @app.route('/add-post', methods=["GET", "POST"])
