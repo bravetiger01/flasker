@@ -4,7 +4,7 @@
 
     {% for message in get_flashed_messages() %}
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            Hey {{name}} - {{message}}
+            Hey - {{message}}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         
@@ -15,9 +15,21 @@
         <br>
 
         <table class="table table-hover table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Field</th>
+                </tr>
+            </thead>
             {% for our_user in our_users %}
                 <tr>
-                    <td>{{our_user.id}}.<a href="{{url_for('update', id=our_user.id)}}">{{our_user.name}}</a> - {{our_user.email}}</td>
+                    <td>{{our_user.id}}</td>
+                    <td><a href="{{url_for('update', id=our_user.id)}}">{{our_user.name}}</a></td>
+                    <td>{{our_user.email}}</td>
+                    <td>{{our_user.field}}</td>
+                    <td><a href="{{ url_for('delete_user', id=our_user.id) }}" type="button" class="btn btn-outline-danger btn-sm mx-1">Delete</a></td>
                 </tr>
                 
             {% endfor %}
@@ -38,15 +50,31 @@
             {{form.email.label(class="form-label")}}
             {{form.email(class="form-control")}}
             <br>
+            {{form.field.label(class="form-label")}}
+            {{form.field(class="form-control")}}
+            <br>
 
             {{form.submit(class="btn btn-secondary")}}
         </form>
     </div>
     <br><br><br>
     <table class="table table-hover table-bordered table-striped">
+        <thead>
+            <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Name</th>
+                <th scope="col">Email</th>
+                <th scope="col">Field</th>
+                <th scope="col">Action</th>
+            </tr>
+        </thead>
         {% for our_user in our_users %}
             <tr>
-                <td>{{our_user.id}}. <a href="{{url_for('update', id=our_user.id)}}">{{our_user.name}}</a> - {{our_user.email}}</td>
+                <td>{{our_user.id}}</td>
+                <td><a href="{{url_for('update', id=our_user.id)}}">{{our_user.name}}</a></td>
+                <td>{{our_user.email}}</td>
+                <td>{{our_user.field}}</td>
+                <td><a href="{{ url_for('delete_user', id=our_user.id) }}" type="button" class="btn btn-outline-danger btn-sm mx-1">Delete</a></td>
             </tr>
             
         {% endfor %}
