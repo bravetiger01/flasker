@@ -6,16 +6,17 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask_login import UserMixin, login_user, LoginManager,login_required, logout_user, current_user
 
-from webforms import LoginForm,PostForms,UserForm,PasswordForm,NamerForm
+from webforms import LoginForm,PostForms,UserForm,PasswordForm,NamerForm,SearchForm
 
 # Create a Flask Instance
 app = Flask(__name__)
 # Add Database
+
 # Old SQLite DB
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 # New MySQL DB
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://username:password@localhost/db_name'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:nakuldesai2510@localhost/our_users'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:nakuldesai2510@localhost/our_users'
 # Secret Key!
 app.config['SECRET_KEY'] = "my super secret key that no one is supposed to know"
 # Initialize The Database
@@ -31,6 +32,25 @@ login_manager.login_view = 'login'
 def load_user(user_id):
 	return Users.query.get(int(user_id))
 
+# Pass stuff to Navbar
+@app.context_processor
+def base():
+	form = SearchForm()
+	return dict(form=form)
+
+# Search Function
+@app.route('/search', methods=["POST"])
+def search():
+	form = SearchForm()
+	posts = Posts.query
+	if form.validate_on_submit():
+		# Get Data from submitted form
+		post.searched = form.searched.data
+		# Query the database
+		posts = posts.filter(Posts.content.like('%' + post.searched + '%'))
+		posts = posts.order_by(Posts.title).all()
+
+		return render_template("search.html", form=form, searched=post.searched, posts=posts)
 
 
 # Login Page
@@ -124,7 +144,7 @@ def edit_post(id):
 
 	if form.validate_on_submit():
 		post.title = form.title.data
-		post.author = form.author.data
+		# post.author = form.author.data
 		post.content = form.content.data
 		post.slug = form.slug.data
 
@@ -136,32 +156,47 @@ def edit_post(id):
 	
 		# Redirect Webpage
 		return redirect(url_for('post', id=id))
-	form.title.data = post.title
-	form.author.data = post.author
-	form.content.data= post.content
-	form.slug.data = post.slug
-	return render_template('edit_post.html', form=form)
+	
+	if current_user.id == post.poster_id:
+		form.title.data = post.title
+		# form.author.data = post.author
+		form.content.data= post.content
+		form.slug.data = post.slug
+		return render_template('edit_post.html', form=form)
+	
+	else:
+		flash("You are not authorized to edit this post")
+		return redirect(url_for('posts'))
 
 @app.route('/posts/delete/<int:id>')
+@login_required
 def delete_post(id):
 	post_to_delete = Posts.query.get_or_404(id)
+	id1 = current_user.id
 
-	try:
-		db.session.delete(post_to_delete)
-		db.session.commit()
+	if id1 == post_to_delete.poster.id:
+		try:
+			db.session.delete(post_to_delete)
+			db.session.commit()
 
-		flash("Blog Deleted Successfully!!")
+			flash("Blog Deleted Successfully!!")
+
+			# Grab all the post from database
+			posts = Posts.query.order_by(Posts.date_posted)
+			return redirect(url_for('posts'))
+		
+		except:
+			flash("Whoops!! There was an error deleting blog")
+
+			# Grab all the post from database
+			posts = Posts.query.order_by(Posts.date_posted)
+			return redirect(url_for('posts'))
+	else:
+		flash("You Aren't Authorized to delete that post")
 
 		# Grab all the post from database
 		posts = Posts.query.order_by(Posts.date_posted)
-		return render_template('posts.html', posts=posts)
-	
-	except:
-		flash("Whoops!! There was an error deleting blog")
-
-		# Grab all the post from database
-		posts = Posts.query.order_by(Posts.date_posted)
-		return render_template('posts.html', posts=posts)
+		return redirect(url_for('posts'))
 
 # Add Post Page
 @app.route('/add-post', methods=["GET", "POST"])
@@ -170,10 +205,11 @@ def add_post():
 	form = PostForms()
 
 	if form.validate_on_submit():
-		post = Posts(title=form.title.data,author=form.author.data,content=form.content.data,slug=form.slug.data,)
+		poster = current_user.id
+		post = Posts(title=form.title.data,poster_id=poster,content=form.content.data,slug=form.slug.data,)
 		# Clear The Form
 		form.title.data = ''
-		form.author.data = ''
+		# form.author.data = ''
 		form.content.data = ''
 		form.slug.data = ''
 
@@ -214,6 +250,7 @@ def delete(id):
 
 # Update Database Record
 @app.route('/update/<int:id>', methods=['GET', 'POST'])
+@login_required
 def update(id):
 	form = UserForm()
 	name_to_update = Users.query.get_or_404(id)
@@ -369,6 +406,9 @@ class Users(db.Model,UserMixin):
 	# Do some password stuff!
 	password_hash = db.Column(db.String(200))
 
+	# User can have many posts
+	posts = db.relationship('Posts', backref='poster')
+
 	@property
 	def password(self):
 		raise AttributeError('password is not a readable attribute!')
@@ -388,6 +428,9 @@ class Posts(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
 	title = db.Column(db.String(255), nullable=False)
 	content = db.Column(db.Text, nullable=False)
-	author = db.Column(db.String(255), nullable=False)
+	# author = db.Column(db.String(255), nullable=False)
 	date_posted = db.Column(db.DateTime, default=datetime.now())
 	slug = db.Column(db.String(255), nullable=False)
+
+	# Foreign Key To Link Users (refers to the primary key of user)
+	poster_id = db.Column(db.Integer, db.ForeignKey('users.id'))
