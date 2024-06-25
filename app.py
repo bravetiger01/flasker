@@ -43,6 +43,18 @@ def base():
 	form = SearchForm()
 	return dict(form=form)
 
+# Create Admin Page
+@app.route('/admin')
+@login_required
+def admin():
+	id = current_user.id
+	if id == 1:
+		return render_template("admin.html")
+	else:
+		flash("Sorry You can't access this page.......")
+		return redirect(url_for('dashboard'))
+		
+
 # Search Function
 @app.route('/search', methods=["POST"])
 def search():
@@ -337,12 +349,10 @@ def index():
 
 # localhost:5000/user/John
 @app.route('/user/<name>')
-
 def user(name):
 	return render_template("user.html", user_name=name)
 
-# Create Custom Error Pages
-
+## Create Custom Error Pages
 # Invalid URL
 @app.errorhandler(404)
 def page_not_found(e):
