@@ -14,7 +14,7 @@
 
     
     <div class="shadow p-3 mb-5 bg-body rounded">
-        
+        <h2>Edit Posts</h2> <br>
 
             <form method="POST">
                 {{form.hidden_tag()}}
@@ -31,6 +31,8 @@
                 
                 {{form.submit(class="btn btn-secondary")}}
             </form>
+            {{ ckeditor.load() }}
+            {{ ckeditor.config(name='content') }}
 
         
     </div>

@@ -8,8 +8,13 @@ from flask_login import UserMixin, login_user, LoginManager,login_required, logo
 
 from webforms import LoginForm,PostForms,UserForm,PasswordForm,NamerForm,SearchForm
 
+from flask_ckeditor import CKEditor
+
 # Create a Flask Instance
 app = Flask(__name__)
+
+# Add CKEditor
+ckeditor = CKEditor(app)
 # Add Database
 
 # Old SQLite DB

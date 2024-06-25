@@ -17,7 +17,7 @@
         <h2>{{ post.title }}</h2> 
         <small>By: {{ post.poster.name }} <br>
         {{ post.date_posted }}</small> <br>
-        {{ post.content }} <br><br>
+        {{ post.content|safe }} <br><br>
 
         
     </div>

@@ -18,7 +18,8 @@
         <h2>{{ post.title }}</h2> 
         <small>By: {{ post.poster.name }} <br>
         {{ post.date_posted }}</small> <br>
-        {{ post.content }} <br><br>
+
+        {{ post.content|safe }} <br><br>
         <a href="{{ url_for('post', id=post.id) }}" class="btn btn-outline-primary btn-sm">View Post</a>
         
         {% if post.poster_id == current_user.id %}
