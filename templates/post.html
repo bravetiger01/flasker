@@ -19,6 +19,11 @@
         {{ post.date_posted }}</small> <br>
         {{ post.content|safe }} <br><br>
 
+
+        {% if post.poster.about_author %}
+            {{ post.poster.about_author }}
+        {% endif %}
+        
         
     </div>
 
