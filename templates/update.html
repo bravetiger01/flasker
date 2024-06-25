@@ -46,6 +46,9 @@
             {{form.name.label(class="form-label")}}
             {{form.name(class="form-control", value=name_to_update.name)}}
             <br>
+            {{form.username.label(class="form-label")}}
+            {{form.username(class="form-control", value=name_to_update.username)}}
+            <br>
             {{form.email.label(class="form-label")}}
             {{form.email(class="form-control", value=name_to_update.email)}}
             <br>
@@ -54,7 +57,7 @@
             <br>
 
             {{form.submit(class="btn btn-secondary")}}
-            <a href="{{ url_for('delete_user', id=name_to_update.id) }}" type="button" class="btn btn-outline-danger btn-sm mx-1">Delete</a>
+            <a href="{{ url_for('delete', id=name_to_update.id) }}" type="button" class="btn btn-outline-danger btn-sm mx-1">Delete</a>
         </form>
     </div>
     <br><br><br>
