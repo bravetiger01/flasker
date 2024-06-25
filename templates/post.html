@@ -19,10 +19,31 @@
         {{ post.date_posted }}</small> <br>
         {{ post.content|safe }} <br><br>
 
+        <div class="card mb-3">
+            <div class="row no-gutters">
+                <div class="col-md-2">
+                   {% if post.poster.profile_pic %}
+                        <img src="{{ url_for('static', filename='images/' + post.poster.profile_pic) }}" alt="" width="150" align="left">
+                   {% else %}
+                        <img src="{{ url_for('static', filename='images/default_profile_pic.png') }}" alt="" width="150" align="left">
+                   {% endif %}
+                </div>
+                <div class="col-md-10">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ post.poster.name }}</h5>
+                        <p class="card-text">
+                            {% if post.poster.about_author %}
+                                {{ post.poster.about_author }}
+                            {% else %}
+                                Author has no about profile yet...
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        {% if post.poster.about_author %}
-            {{ post.poster.about_author }}
-        {% endif %}
+       
         
         
     </div>

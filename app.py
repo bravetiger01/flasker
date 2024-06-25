@@ -17,8 +17,7 @@ from flask_ckeditor import CKEditor
 # Create a Flask Instance
 app = Flask(__name__)
 
-UPLOAD_FOLDER = 'static/images/'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 
 # Add CKEditor
 ckeditor = CKEditor(app)
@@ -31,6 +30,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:nakuldesai2510@localhost/our_users'
 # Secret Key!
 app.config['SECRET_KEY'] = "my super secret key that no one is supposed to know"
+
+UPLOAD_FOLDER = 'static/images/'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 # Initialize The Database
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -116,28 +119,37 @@ def dashboard():
 		name_to_update.field = request.form['field']
 		name_to_update.username = request.form['username']
 		name_to_update.about_author = request.form['about_author']
-		name_to_update.profile_pic = request.files['profile_pic']
+
+		# Check for profile pic
+		if request.files['profile_pic']:
 		
-		
-		# Grab File Name
-		pic_filename = secure_filename(name_to_update.profile_pic.filename)
-		# Set UUID
-		pic_name = str(uuid.uuid1()) + '_' + pic_filename
-		# Save the file
-		saver = request.files['profile_pic']
+			name_to_update.profile_pic = request.files['profile_pic']
+			
+			# Grab File Name
+			pic_filename = secure_filename(name_to_update.profile_pic.filename)
+			# Set UUID
+			pic_name = str(uuid.uuid1()) + '_' + pic_filename
+			# Save the file
+			saver = request.files['profile_pic']
 		
 
-		# Change it to a string to save to db
-		name_to_update.profile_pic = pic_name
-		try:
+			# Change it to a string to save to db
+			name_to_update.profile_pic = pic_name
+			try:
+				db.session.commit()
+				saver.save(os.path.join(app.config['UPLOAD_FOLDER'], pic_name))
+				flash("User Updated Successfully!")
+				return render_template("dashboard.html", 
+					form=form,
+					name_to_update = name_to_update)
+			except:
+				flash("Error!  Looks like there was a problem...try again!")
+				return render_template("dashboard.html", 
+					form=form,
+					name_to_update = name_to_update)
+		else:
 			db.session.commit()
-			saver.save(os.path.join(app.config['UPLOAD_FOLDER']), pic_name)
 			flash("User Updated Successfully!")
-			return render_template("dashboard.html", 
-				form=form,
-				name_to_update = name_to_update)
-		except:
-			flash("Error!  Looks like there was a problem...try again!")
 			return render_template("dashboard.html", 
 				form=form,
 				name_to_update = name_to_update)
@@ -196,7 +208,7 @@ def edit_post(id):
 		# Redirect Webpage
 		return redirect(url_for('post', id=id))
 	
-	if current_user.id == post.poster_id:
+	if current_user.id == post.poster_id or current_user.id == 1:
 		form.title.data = post.title
 		# form.author.data = post.author
 		form.content.data= post.content
@@ -213,7 +225,7 @@ def delete_post(id):
 	post_to_delete = Posts.query.get_or_404(id)
 	id1 = current_user.id
 
-	if id1 == post_to_delete.poster.id:
+	if id1 == post_to_delete.poster.id or id==1:
 		try:
 			db.session.delete(post_to_delete)
 			db.session.commit()
@@ -264,26 +276,31 @@ def add_post():
 
 
 @app.route('/delete/<int:id>')
+@login_required
 def delete(id):
-	user_to_delete = Users.query.get_or_404(id)
-	name = None
-	form = UserForm()
+	if id == current_user.id:
+		user_to_delete = Users.query.get_or_404(id)
+		name = None
+		form = UserForm()
 
-	try:
-		db.session.delete(user_to_delete)
-		db.session.commit()
-		flash("User Deleted Successfully!!")
+		try:
+			db.session.delete(user_to_delete)
+			db.session.commit()
+			flash("User Deleted Successfully!!")
 
-		our_users = Users.query.order_by(Users.date_added).all()
-		return render_template("add_user.html", 
-		form=form,
-		name=name,
-		our_users=our_users)
+			our_users = Users.query.order_by(Users.date_added).all()
+			return render_template("add_user.html", 
+			form=form,
+			name=name,
+			our_users=our_users)
 
-	except:
-		flash("Whoops! There was a problem deleting user, try again...")
-		return render_template("add_user.html", 
-		form=form, name=name,our_users=our_users)
+		except:
+			flash("Whoops! There was a problem deleting user, try again...")
+			return render_template("add_user.html", 
+			form=form, name=name,our_users=our_users)
+	else:
+		flash("Sorry you can't delete that user!")
+		return redirect(url_for('dashboard'))
 
 
 
