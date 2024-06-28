@@ -1,4 +1,4 @@
-from flask import Flask, render_template, flash, redirect,url_for,request
+from flask import Flask, render_template, flash, redirect,url_for,request,session
 from datetime import datetime 
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -13,6 +13,9 @@ from flask_login import UserMixin, login_user, LoginManager,login_required, logo
 from webforms import LoginForm,PostForms,UserForm,PasswordForm,NamerForm,SearchForm
 
 from flask_ckeditor import CKEditor
+
+from authlib.integrations.flask_client import OAuth
+from api_key import *
 
 # Create a Flask Instance
 app = Flask(__name__)
@@ -42,6 +45,33 @@ migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+
+oauth = OAuth(app)
+
+google = oauth.register(
+    name='google',
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    authorize_url='https://accounts.google.com/o/oauth2/v2/auth',
+    access_token_url="https://oauth2.googleapis.com/token",
+    authorization_base_url="https://accounts.google.com/o/oauth2/v2/auth",
+    token_url="https://oauth2.googleapis.com/token",
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs = {'scope': 'openid profile email'},
+    access_token_method="POST"
+)
+
+github = oauth.register(
+    name='github',
+    client_id=GITHUB_CLIENT_ID,
+    client_secret=GITHUB_CLIENT_SECRET,
+    authorize_url='https://github.com/login/oauth/authorize',
+    authorize_params=None,
+    access_token_url='https://github.com/login/oauth/access_token',
+    access_token_params=None,
+    client_kwargs={'scope': 'user:email'},
+)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -169,6 +199,81 @@ def get_current_date():
 
 	}
 	return favorite_pizza
+
+
+# Login FOr Google
+@app.route('/login/google')
+def login_google():
+	try:
+		redirect_uri = url_for('authorize_google', _external=True)
+		return google.authorize_redirect(redirect_uri, prompt='select_account')
+	except Exception as e:
+		app.logger.error(f"Error during login: {str(e)}")
+		return "Error occured during login", 500
+
+# Authorize For Google
+@app.route("/authorize/google")
+def authorize_google():
+	token = google.authorize_access_token()
+	userinfo_endpoint = google.server_metadata['userinfo_endpoint']
+	response = google.get(userinfo_endpoint)
+	user_info = response.json()
+	email = user_info['email']
+
+	user = Users.query.filter_by(email=email).first()
+	
+	if user is None:
+		user = Users(email=email, name=user_info['name'], password="")
+		db.session.add(user)
+		db.session.commit()
+		flash("User Created Successfully!")
+		login_user(user)
+		return redirect(url_for('dashboard', id=user.id))
+	else:
+		login_user(user)
+		return redirect(url_for('dashboard', id=user.id))
+
+
+
+@app.route('/login/github')
+def login_github():
+    redirect_uri = url_for('authorize_github', _external=True)
+    return github.authorize_redirect(redirect_uri, prompt='select_account')
+
+@app.route('/authorize/github')
+def authorize_github():
+    token = github.authorize_access_token()
+    resp = github.get('https://api.github.com/user')
+    user_info = resp.json()
+
+    email = user_info.get('email')
+    name = user_info.get('name')
+    username = user_info.get('login')
+
+    # If email is not provided, request it from the emails endpoint
+    if not email:
+        emails_resp = github.get('https://api.github.com/user/emails')
+        emails = emails_resp.json()
+        email = next((e['email'] for e in emails if e['primary'] and e['verified']), None)
+
+    if not email:
+        flash("Email not provided by GitHub. Please use another login method.")
+        return redirect(url_for('login'))
+
+    user = Users.query.filter_by(email=email).first()
+
+    if user is None:
+        user = Users(
+            email=email,
+            name=name if name else '',
+            username=username if username else '',
+            password=""
+        )
+        db.session.add(user)
+        db.session.commit()
+        flash("User Created Successfully!")
+    login_user(user)
+    return redirect(url_for('dashboard'))
 
 
 
@@ -452,7 +557,7 @@ def name():
 # Create Model
 class Users(db.Model,UserMixin):
 	id = db.Column(db.Integer, primary_key=True)
-	username = db.Column(db.String(20), nullable=False, unique=True)
+	username = db.Column(db.String(20), nullable=True, unique=True)
 	name = db.Column(db.String(200), nullable=False)
 	email = db.Column(db.String(120), nullable=False, unique=True)
 	field = db.Column(db.String(120))
@@ -460,7 +565,7 @@ class Users(db.Model,UserMixin):
 	date_added = db.Column(db.DateTime, default=datetime.now)
 	profile_pic = db.Column(db.String, nullable=True)
 	# Do some password stuff!
-	password_hash = db.Column(db.String(200))
+	password_hash = db.Column(db.String(200),nullable=True)
 
 	# User can have many posts
 	posts = db.relationship('Posts', backref='poster')
